@@ -79,7 +79,7 @@ Requires Ubuntu 24.04 LTS with ROS 2 Jazzy installed at `/opt/ros/jazzy`.
 **1. Get the code**
 
 ```bash
-git clone <repository-url> wsl
+git clone https://github.com/azerbenali/wsl.git
 cd wsl
 ```
 
