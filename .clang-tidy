@@ -1,0 +1,19 @@
+# Deliberately small: checks that find real defects, not style.
+# performance-noexcept-* is off: clang-tidy 18 overflows its stack analysing
+# PCL/Eigen templates with it.
+Checks: >
+  -*,
+  bugprone-*,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-narrowing-conversions,
+  clang-analyzer-*,
+  performance-*,
+  -performance-noexcept-move-constructor,
+  -performance-noexcept-destructor,
+  -performance-noexcept-swap,
+  modernize-use-nullptr,
+  modernize-use-override,
+  readability-container-size-empty,
+  readability-redundant-string-cstr
+WarningsAsErrors: ''
+HeaderFilterRegex: 'wsl_perception/(include|src|test)/.*'

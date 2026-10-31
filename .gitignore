@@ -1,0 +1,12 @@
+build/
+install/
+log/
+__pycache__/
+*.pyc
+.pytest_cache/
+# Benchmark runs are generated per experiment; commit curated references only.
+results/
+.vscode/ros.env
+.DS_Store
+.idea/
+*.swp
