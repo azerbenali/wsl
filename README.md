@@ -1,6 +1,6 @@
 <div align="center">
 
-# WSL — Warehouse Simulation Lab
+# Warehouse Simulation Lab
 
 **A warehouse mobile robot that maps, perceives, and measures its own accuracy.**
 
