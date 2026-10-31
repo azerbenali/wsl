@@ -1,0 +1,21 @@
+name: warehouse_loop_lowres
+description: >
+  warehouse_loop with half the LiDAR resolution (8 channels, 450 samples per
+  revolution): measures how SLAM accuracy and system load scale with sensor
+  fidelity.
+spawn: {x: -12.0, y: 9.0, yaw: 0.0}
+robot:
+  odom_wheel_separation_scale: 1.03
+  odom_wheel_radius_scale: 0.99
+  lidar_channels: 8
+  lidar_horizontal_samples: 450
+route:
+  speed_mps: 0.6
+  max_duration_s: 600
+  waypoints:
+    - [-12.0, 9.0]
+    - [17.5, 9.0]
+    - [17.5, -13.65]
+    - [-17.8, -13.65]
+    - [-17.8, 9.0]
+    - [-12.0, 9.0]

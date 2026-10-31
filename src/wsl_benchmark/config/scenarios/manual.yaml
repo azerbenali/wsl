@@ -1,0 +1,5 @@
+name: manual
+description: >
+  No route: record metrics while the robot is driven externally (teleop or
+  /cmd_vel), until the launch is stopped with Ctrl-C.
+spawn: {x: -12.0, y: 9.0, yaw: 0.0}

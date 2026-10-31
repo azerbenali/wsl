@@ -1,0 +1,20 @@
+name: aisle_loop
+description: >
+  Repetitive-geometry stress test (~62 m). Down the cross aisle past both
+  pillars, west along aisle A2 between identical rack rows, north up the west
+  perimeter aisle and back. Rack bays repeat every 2.7 m, so scan matching
+  along A2 is poorly constrained in the aisle direction.
+spawn: {x: -12.0, y: 9.0, yaw: 0.0}
+robot:
+  odom_wheel_separation_scale: 1.03
+  odom_wheel_radius_scale: 0.99
+route:
+  speed_mps: 0.5
+  max_duration_s: 500
+  waypoints:
+    - [-12.0, 9.0]
+    - [1.2, 9.0]
+    - [1.2, -3.2]
+    - [-17.8, -3.2]
+    - [-17.8, 9.0]
+    - [-12.0, 9.0]

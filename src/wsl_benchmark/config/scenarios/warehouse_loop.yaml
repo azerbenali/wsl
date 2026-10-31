@@ -1,0 +1,21 @@
+name: warehouse_loop
+description: >
+  Flagship loop-closure experiment. Clockwise loop of ~116 m along the open
+  staging area and the east, south and west perimeter aisles, returning to the
+  start. The odometry model has a 3% wheel-separation and -1% wheel-radius
+  calibration error, so wheel odometry accumulates heading drift that SLAM must
+  correct when the loop closes.
+spawn: {x: -12.0, y: 9.0, yaw: 0.0}
+robot:
+  odom_wheel_separation_scale: 1.03
+  odom_wheel_radius_scale: 0.99
+route:
+  speed_mps: 0.6
+  max_duration_s: 600
+  waypoints:
+    - [-12.0, 9.0]
+    - [17.5, 9.0]
+    - [17.5, -13.65]
+    - [-17.8, -13.65]
+    - [-17.8, 9.0]
+    - [-12.0, 9.0]
