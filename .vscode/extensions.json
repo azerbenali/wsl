@@ -1,0 +1,13 @@
+{
+  "recommendations": [
+    "ms-vscode-remote.remote-containers",
+    "ms-vscode.cpptools",
+    "ms-vscode.cmake-tools",
+    "ms-python.python",
+    "ms-python.flake8",
+    "xaver.clang-format",
+    "redhat.vscode-xml",
+    "redhat.vscode-yaml",
+    "bierner.markdown-mermaid"
+  ]
+}

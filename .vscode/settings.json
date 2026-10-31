@@ -1,0 +1,46 @@
+{
+  // colcon writes one compile database per package; perception is the C++ package.
+  "C_Cpp.default.compileCommands": "${workspaceFolder}/build/wsl_perception/compile_commands.json",
+  "C_Cpp.default.cppStandard": "c++17",
+  "C_Cpp.formatting": "clangFormat",
+  "C_Cpp.clang_format_style": "file",
+  "cmake.configureOnOpen": false,
+
+  "python.analysis.extraPaths": [
+    "/opt/ros/jazzy/lib/python3.12/site-packages",
+    "${workspaceFolder}/src/wsl_benchmark"
+  ],
+  "python.autoComplete.extraPaths": [
+    "/opt/ros/jazzy/lib/python3.12/site-packages"
+  ],
+  "python.testing.pytestEnabled": true,
+  "python.testing.unittestEnabled": false,
+  "python.testing.cwd": "${workspaceFolder}/src/wsl_benchmark",
+  "python.testing.pytestArgs": ["test"],
+  "flake8.args": ["--config=${workspaceFolder}/.flake8"],
+
+  "files.associations": {
+    "*.xacro": "xml",
+    "*.urdf": "xml",
+    "*.sdf": "xml",
+    "*.world": "xml",
+    "model.config": "xml",
+    "*.rviz": "yaml",
+    "*.launch.py": "python"
+  },
+  "files.exclude": {
+    "build": true,
+    "install": true,
+    "log": true
+  },
+  "search.exclude": {
+    "build": true,
+    "install": true,
+    "log": true,
+    "results": true
+  },
+  "[cpp]": { "editor.formatOnSave": true, "editor.rulers": [100] },
+  "[python]": { "editor.rulers": [100] },
+  "editor.tabSize": 2,
+  "[python][markdown]": { "editor.tabSize": 4 }
+}

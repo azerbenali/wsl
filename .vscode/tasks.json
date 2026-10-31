@@ -1,0 +1,119 @@
+{
+  // Commands run through .vscode/ros.sh, which sources ROS 2 Jazzy and the
+  // workspace overlay (once built).
+  "version": "2.0.0",
+  "options": {
+    "shell": { "executable": "/bin/bash", "args": ["-c"] }
+  },
+  "tasks": [
+    {
+      "label": "rosdep: install dependencies",
+      "type": "shell",
+      "command": ".vscode/ros.sh bash -c 'SUDO=$([ \"$(id -u)\" -eq 0 ] || echo sudo) && $SUDO apt-get update && rosdep update && rosdep install --from-paths src --ignore-src -r -y'",
+      "problemMatcher": []
+    },
+    {
+      "label": "colcon: build",
+      "type": "shell",
+      "command": ".vscode/ros.sh colcon build --symlink-install --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": { "base": "$gcc", "fileLocation": "absolute" }
+    },
+    {
+      "label": "colcon: build perception (Debug)",
+      "type": "shell",
+      "command": ".vscode/ros.sh colcon build --symlink-install --packages-select wsl_perception --cmake-args -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
+      "problemMatcher": { "base": "$gcc", "fileLocation": "absolute" }
+    },
+    {
+      "label": "colcon: test",
+      "type": "shell",
+      "command": ".vscode/ros.sh bash -c 'colcon test --event-handlers console_cohesion+ ; colcon test-result --verbose'",
+      "group": { "kind": "test", "isDefault": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "colcon: simulation smoke test",
+      "detail": "Headless end-to-end test: Gazebo, sensors, TF, driving (about 1 minute)",
+      "type": "shell",
+      "command": ".vscode/ros.sh bash -c 'colcon build --symlink-install --packages-select wsl_sim --cmake-args -DWSL_SIM_TESTS=ON && colcon test --packages-select wsl_sim --ctest-args -R system_smoke --event-handlers console_cohesion+ ; colcon test-result --verbose'",
+      "problemMatcher": []
+    },
+    {
+      "label": "colcon: clean",
+      "type": "shell",
+      "command": "rm -rf build install log",
+      "problemMatcher": []
+    },
+    {
+      "label": "run: warehouse (Gazebo + RViz)",
+      "type": "shell",
+      "command": ".vscode/ros.sh ros2 launch wsl_sim warehouse.launch.py",
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "run: warehouse without perception (to debug perception_node)",
+      "type": "shell",
+      "command": ".vscode/ros.sh ros2 launch wsl_sim warehouse.launch.py perception:=false",
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "run: warehouse (headless, no RViz)",
+      "type": "shell",
+      "command": ".vscode/ros.sh ros2 launch wsl_sim warehouse.launch.py headless:=true rviz:=false",
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "run: teleop keyboard",
+      "detail": "Drive the robot: run while the warehouse is running",
+      "type": "shell",
+      "command": ".vscode/ros.sh ros2 run teleop_twist_keyboard teleop_twist_keyboard",
+      "problemMatcher": []
+    },
+    {
+      "label": "run: benchmark scenario",
+      "type": "shell",
+      "command": ".vscode/ros.sh ros2 launch wsl_benchmark benchmark.launch.py scenario:=${input:scenario} rviz:=${input:rviz}",
+      "problemMatcher": []
+    },
+    {
+      "label": "run: perception micro-benchmark",
+      "type": "shell",
+      "command": "./build/wsl_perception/pipeline_benchmark 300",
+      "problemMatcher": []
+    },
+    {
+      "label": "lint: clang-format + flake8",
+      "type": "shell",
+      "command": "git ls-files '*.cpp' '*.hpp' | xargs clang-format --dry-run --Werror && python3 -m flake8 src && echo 'lint: clean'",
+      "problemMatcher": []
+    },
+    {
+      "label": "debug: write ROS environment file",
+      "detail": "Used by launch.json so debugged processes see the sourced ROS environment",
+      "type": "shell",
+      "command": ".vscode/ros.sh bash -c 'env > .vscode/ros.env'",
+      "presentation": { "reveal": "silent" },
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "scenario",
+      "type": "pickString",
+      "description": "Benchmark scenario",
+      "options": ["warehouse_loop", "aisle_loop", "warehouse_loop_lowres", "manual"],
+      "default": "warehouse_loop"
+    },
+    {
+      "id": "rviz",
+      "type": "pickString",
+      "description": "Show RViz during the run?",
+      "options": ["true", "false"],
+      "default": "true"
+    }
+  ]
+}

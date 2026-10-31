@@ -1,0 +1,70 @@
+{
+  // Build first (Ctrl+Shift+B). For stepping through optimised-away code, run
+  // the "colcon: build perception (Debug)" task.
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "C++: perception_node (start the simulation with perception:=false first)",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/install/wsl_perception/lib/wsl_perception/perception_node",
+      "args": [
+        "--ros-args", "-r", "__node:=perception",
+        "--params-file", "${workspaceFolder}/src/wsl_perception/config/perception.yaml",
+        "-p", "use_sim_time:=true"
+      ],
+      "cwd": "${workspaceFolder}",
+      "envFile": "${workspaceFolder}/.vscode/ros.env",
+      "preLaunchTask": "debug: write ROS environment file",
+      "MIMode": "gdb",
+      "setupCommands": [{ "text": "-enable-pretty-printing", "ignoreFailures": true }]
+    },
+    {
+      "name": "C++: pipeline micro-benchmark",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/wsl_perception/pipeline_benchmark",
+      "args": ["50"],
+      "cwd": "${workspaceFolder}",
+      "envFile": "${workspaceFolder}/.vscode/ros.env",
+      "preLaunchTask": "debug: write ROS environment file",
+      "MIMode": "gdb"
+    },
+    {
+      "name": "C++: perception unit test",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/wsl_perception/${input:gtest}",
+      "args": ["--gtest_color=yes"],
+      "cwd": "${workspaceFolder}",
+      "envFile": "${workspaceFolder}/.vscode/ros.env",
+      "preLaunchTask": "debug: write ROS environment file",
+      "MIMode": "gdb"
+    },
+    {
+      "name": "Python: evaluate a benchmark run",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "wsl_benchmark.evaluate",
+      "args": ["${input:runDir}"],
+      "cwd": "${workspaceFolder}",
+      "envFile": "${workspaceFolder}/.vscode/ros.env",
+      "preLaunchTask": "debug: write ROS environment file",
+      "justMyCode": true
+    }
+  ],
+  "inputs": [
+    {
+      "id": "gtest",
+      "type": "pickString",
+      "description": "Test binary",
+      "options": ["test_cloud_pipeline", "test_point_cloud_conversion", "test_pipeline_properties"]
+    },
+    {
+      "id": "runDir",
+      "type": "promptString",
+      "description": "Run directory written by the benchmark",
+      "default": "results/"
+    }
+  ]
+}
