@@ -1,0 +1,72 @@
+# RTAB-Map graph SLAM with 3D LiDAR and wheel odometry.
+#
+# Odometry is read from TF (odom -> base_footprint, published by DiffDrive)
+# at each scan's stamp, which avoids approximate topic synchronisation. Each
+# new graph node is linked to the previous one by point-to-plane ICP between
+# scans (neighbour link refinement), so wheel slip and calibration error are
+# corrected locally. Loop closures are found by proximity: when the robot
+# revisits a place within RGBD/LocalRadius of the current pose estimate, the
+# scans are registered by ICP and, if accepted, the graph is optimised.
+# rtabmap publishes map -> odom; it is the only authority for that transform.
+#
+# RTAB-Map parameters are strings in ROS 2. The key matches the node in any
+# namespace (slam.launch.py runs it as /rtabmap/rtabmap).
+/**/rtabmap:
+  ros__parameters:
+    frame_id: base_footprint
+    map_frame_id: map
+    odom_frame_id: odom
+    odom_tf_linear_variance: 0.001
+    odom_tf_angular_variance: 0.001
+    publish_tf: true
+    wait_for_transform: 0.2
+    subscribe_depth: false
+    subscribe_rgb: false
+    subscribe_scan_cloud: true
+    # A single sensor stream: nothing to synchronise.
+    approx_sync: false
+    # Keep only the newest scan: if mapping falls behind, stale scans are
+    # skipped instead of queued, bounding latency.
+    topic_queue_size: 1
+
+    # Planar robot: estimate x, y, yaw only. The IMU is therefore not used.
+    Reg/Force3DoF: "true"
+    Reg/Strategy: "1"
+    RGBD/NeighborLinkRefining: "true"
+    RGBD/LinearUpdate: "0.2"
+    RGBD/AngularUpdate: "0.1"
+
+    RGBD/ProximityBySpace: "true"
+    RGBD/ProximityMaxGraphDepth: "0"
+    RGBD/ProximityPathMaxNeighbors: "1"
+    RGBD/LocalRadius: "8"
+    RGBD/OptimizeMaxError: "3.0"
+
+    Mem/NotLinkedNodesKept: "false"
+    Mem/STMSize: "30"
+
+    # PCL ICP: available in every rtabmap build, unlike libpointmatcher.
+    Icp/Strategy: "0"
+    Icp/VoxelSize: "0.1"
+    Icp/PointToPlane: "true"
+    Icp/PointToPlaneK: "20"
+    Icp/PointToPlaneRadius: "0"
+    Icp/Iterations: "30"
+    Icp/Epsilon: "0.001"
+    Icp/MaxTranslation: "2.0"
+    Icp/MaxRotation: "0.78"
+    Icp/MaxCorrespondenceDistance: "1.0"
+    Icp/CorrespondenceRatio: "0.2"
+    Icp/RangeMin: "0.5"
+    Icp/RangeMax: "25"
+
+    # 2D occupancy grid projected from the 3D scans, for RViz and planning.
+    RGBD/CreateOccupancyGrid: "true"
+    Grid/Sensor: "0"
+    Grid/3D: "false"
+    Grid/CellSize: "0.05"
+    Grid/RangeMax: "20"
+    Grid/RayTracing: "true"
+    Grid/MaxGroundHeight: "0.05"
+    Grid/MaxObstacleHeight: "2.0"
+    Grid/NormalsSegmentation: "false"
