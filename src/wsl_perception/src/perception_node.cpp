@@ -82,8 +82,7 @@ constexpr std::array<DoubleParam, 13> kDoubleParams{{
   {"ground_max_height_m", &wsl_perception::PipelineConfig::ground_max_height_m, -1.0, 2.0,
    "[m] Only points below this height are ground-plane candidates."},
   {"ground_distance_threshold_m", &wsl_perception::PipelineConfig::ground_distance_threshold_m,
-   0.005, 0.5,
-   "[m] Maximum point-to-plane distance for a ground point."},
+   0.005, 0.5, "[m] Maximum point-to-plane distance for a ground point."},
   {"ground_max_tilt_rad", &wsl_perception::PipelineConfig::ground_max_tilt_rad, 0.01, 1.0,
    "[rad] Maximum angle between the ground normal and the target-frame z axis."},
   {"cluster_tolerance_m", &wsl_perception::PipelineConfig::cluster_tolerance_m, 0.02, 5.0,
@@ -98,8 +97,7 @@ constexpr DoubleParam kTfTimeout{
   "[s] Maximum wait for the sensor-to-target transform per cloud."};
 
 constexpr std::array<IntParam, 4> kIntParams{{
-  {"ground_ransac_iterations", &wsl_perception::PipelineConfig::ground_ransac_iterations, 1,
-   10000,
+  {"ground_ransac_iterations", &wsl_perception::PipelineConfig::ground_ransac_iterations, 1, 10000,
    "RANSAC iterations for the ground plane."},
   {"ground_min_inliers", &wsl_perception::PipelineConfig::ground_min_inliers, 3, 1000000,
    "Minimum inliers to accept a ground plane."},
