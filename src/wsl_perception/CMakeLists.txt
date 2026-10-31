@@ -21,6 +21,10 @@ endif()
 if(WSL_SANITIZE)
   add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all)
   add_link_options(-fsanitize=address,undefined)
+  # Eigen stops trusting glibc malloc alignment under ASan, but the distro PCL
+  # was built trusting it. Without this, PointCloud buffers PCL allocates are
+  # freed with Eigen's handmade path and ASan reports a heap-buffer-overflow.
+  add_compile_definitions(EIGEN_MALLOC_ALREADY_ALIGNED=1)
 endif()
 
 find_package(ament_cmake REQUIRED)
