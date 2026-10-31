@@ -1,0 +1,125 @@
+<?xml version="1.0"?>
+<!--
+  WSL warehouse: 40 x 30 m interior, x in [-20, 20], y in [-15, 15].
+
+  Layout (y ranges):
+    [-15.0, -12.3]  south perimeter aisle
+    [-12.3, -10.0]  rack rows P1
+    [-10.0,  -7.0]  aisle A1  (west half is a dead end, east half has a cut-through to A2)
+    [ -7.0,  -4.7]  rack rows P2
+    [ -4.7,  -1.7]  aisle A2
+    [ -1.7,   0.6]  rack rows P3
+    [  0.6,   3.6]  aisle A3  (east half narrows to 0.9 m at x = 12)
+    [  3.6,   5.9]  rack rows P4
+    [  5.9,  15.0]  open staging area, office block in the north-east corner
+  Rack blocks span x in [-16, -2.5] and [2.5, 16]; the cross aisle x in
+  [-2.5, 2.5] and the perimeter aisles connect everything into several loops.
+
+  Physics runs at 500 Hz on DART. Shadows are off: they add rendering cost to
+  every camera and GPU LiDAR frame without changing any experiment.
+-->
+<sdf version="1.9">
+  <world name="warehouse">
+    <physics name="2ms" type="dart">
+      <max_step_size>0.002</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+    <gravity>0 0 -9.81</gravity>
+
+    <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics"/>
+    <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands"/>
+    <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster"/>
+    <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+    <plugin filename="gz-sim-imu-system" name="gz::sim::systems::Imu"/>
+
+    <scene>
+      <ambient>0.6 0.6 0.6 1</ambient>
+      <background>0.7 0.7 0.75 1</background>
+      <shadows>false</shadows>
+      <grid>false</grid>
+    </scene>
+
+    <light type="directional" name="sun">
+      <cast_shadows>false</cast_shadows>
+      <pose>0 0 20 0 0 0</pose>
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <specular>0.1 0.1 0.1 1</specular>
+      <direction>-0.3 0.2 -0.9</direction>
+    </light>
+
+    <model name="floor">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry><plane><normal>0 0 1</normal><size>50 40</size></plane></geometry>
+          <surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface>
+        </collision>
+        <visual name="visual">
+          <geometry><plane><normal>0 0 1</normal><size>50 40</size></plane></geometry>
+          <material><ambient>0.45 0.45 0.47 1</ambient><diffuse>0.45 0.45 0.47 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="walls">
+      <static>true</static>
+      <link name="link">
+        <collision name="north_collision"><pose>0 15.15 2.5 0 0 0</pose><geometry><box><size>40.6 0.3 5</size></box></geometry></collision>
+        <visual name="north_visual"><pose>0 15.15 2.5 0 0 0</pose><geometry><box><size>40.6 0.3 5</size></box></geometry><material><diffuse>0.80 0.80 0.75 1</diffuse></material></visual>
+        <collision name="south_collision"><pose>0 -15.15 2.5 0 0 0</pose><geometry><box><size>40.6 0.3 5</size></box></geometry></collision>
+        <visual name="south_visual"><pose>0 -15.15 2.5 0 0 0</pose><geometry><box><size>40.6 0.3 5</size></box></geometry><material><diffuse>0.80 0.80 0.75 1</diffuse></material></visual>
+        <collision name="east_collision"><pose>20.15 0 2.5 0 0 0</pose><geometry><box><size>0.3 30 5</size></box></geometry></collision>
+        <visual name="east_visual"><pose>20.15 0 2.5 0 0 0</pose><geometry><box><size>0.3 30 5</size></box></geometry><material><diffuse>0.75 0.78 0.80 1</diffuse></material></visual>
+        <collision name="west_collision"><pose>-20.15 0 2.5 0 0 0</pose><geometry><box><size>0.3 30 5</size></box></geometry></collision>
+        <visual name="west_visual"><pose>-20.15 0 2.5 0 0 0</pose><geometry><box><size>0.3 30 5</size></box></geometry><material><diffuse>0.75 0.78 0.80 1</diffuse></material></visual>
+        <!-- Office block in the north-east corner: a large unique landmark. -->
+        <collision name="office_collision"><pose>17 12.5 1.5 0 0 0</pose><geometry><box><size>6 5 3</size></box></geometry></collision>
+        <visual name="office_visual"><pose>17 12.5 1.5 0 0 0</pose><geometry><box><size>6 5 3</size></box></geometry><material><diffuse>0.30 0.55 0.35 1</diffuse></material></visual>
+      </link>
+    </model>
+
+    <include><name>rows_p1_west</name><uri>model://wsl_rack_row</uri><pose>-9.25 -11.15 0 0 0 0</pose></include>
+    <include><name>rows_p1_east</name><uri>model://wsl_rack_row</uri><pose>9.25 -11.15 0 0 0 0</pose></include>
+    <include><name>rows_p2_west</name><uri>model://wsl_rack_row</uri><pose>-9.25 -5.85 0 0 0 0</pose></include>
+    <include><name>rows_p3_west</name><uri>model://wsl_rack_row</uri><pose>-9.25 -0.55 0 0 0 0</pose></include>
+    <include><name>rows_p3_east</name><uri>model://wsl_rack_row</uri><pose>9.25 -0.55 0 0 0 0</pose></include>
+    <include><name>rows_p4_west</name><uri>model://wsl_rack_row</uri><pose>-9.25 4.75 0 0 0 0</pose></include>
+    <include><name>rows_p4_east</name><uri>model://wsl_rack_row</uri><pose>9.25 4.75 0 0 0 0</pose></include>
+
+    <!-- P2 east: centre bay pair omitted, forming a cut-through and two T-junctions. -->
+    <include><name>p2e_n0</name><uri>model://wsl_rack</uri><pose>3.85 -5.25 0 0 0 0</pose></include>
+    <include><name>p2e_n1</name><uri>model://wsl_rack</uri><pose>6.55 -5.25 0 0 0 0</pose></include>
+    <include><name>p2e_n3</name><uri>model://wsl_rack</uri><pose>11.95 -5.25 0 0 0 0</pose></include>
+    <include><name>p2e_n4</name><uri>model://wsl_rack</uri><pose>14.65 -5.25 0 0 0 0</pose></include>
+    <include><name>p2e_s0</name><uri>model://wsl_rack</uri><pose>3.85 -6.45 0 0 0 3.14159265</pose></include>
+    <include><name>p2e_s1</name><uri>model://wsl_rack</uri><pose>6.55 -6.45 0 0 0 3.14159265</pose></include>
+    <include><name>p2e_s3</name><uri>model://wsl_rack</uri><pose>11.95 -6.45 0 0 0 3.14159265</pose></include>
+    <include><name>p2e_s4</name><uri>model://wsl_rack</uri><pose>14.65 -6.45 0 0 0 3.14159265</pose></include>
+
+    <!-- A1 west is closed at its west end: a dead end reachable only from the cross aisle. -->
+    <include><name>dead_end_a</name><uri>model://wsl_pallet_stack</uri><pose>-16.6 -9.2 0 0 0 1.5708</pose></include>
+    <include><name>dead_end_b</name><uri>model://wsl_pallet_stack</uri><pose>-16.6 -7.8 0 0 0 1.5708</pose></include>
+
+    <!-- A3 east narrows to a 0.9 m passage at x = 12. -->
+    <include><name>narrow_a</name><uri>model://wsl_pallet_stack</uri><pose>12 1.2 0 0 0 0</pose></include>
+    <include><name>narrow_b</name><uri>model://wsl_pallet_stack</uri><pose>12 3.1 0 0 0 0</pose></include>
+
+    <include><name>pillar_n_west</name><uri>model://wsl_pillar</uri><pose>-10 11.5 0 0 0 0</pose></include>
+    <include><name>pillar_n_centre</name><uri>model://wsl_pillar</uri><pose>0 11.5 0 0 0 0</pose></include>
+    <include><name>pillar_n_east</name><uri>model://wsl_pillar</uri><pose>10 11.5 0 0 0 0</pose></include>
+    <include><name>pillar_x_south</name><uri>model://wsl_pillar</uri><pose>0 -8.5 0 0 0 0</pose></include>
+    <include><name>pillar_x_north</name><uri>model://wsl_pillar</uri><pose>0 2.1 0 0 0 0</pose></include>
+
+    <!-- Staging area: irregular floor stock breaks the symmetry of the open area. -->
+    <include><name>stage_0</name><uri>model://wsl_pallet_stack</uri><pose>-16 13 0 0 0 0</pose></include>
+    <include><name>stage_1</name><uri>model://wsl_pallet_stack</uri><pose>-14.6 13 0 0 0 0</pose></include>
+    <include><name>stage_2</name><uri>model://wsl_pallet_stack</uri><pose>-6 13.2 0 0 0 0.4</pose></include>
+    <include><name>stage_3</name><uri>model://wsl_pallet_stack</uri><pose>4.5 13.4 0 0 0 0</pose></include>
+    <include><name>stage_4</name><uri>model://wsl_pallet_stack</uri><pose>6.0 13.4 0 0 0 0</pose></include>
+    <include><name>stage_5</name><uri>model://wsl_pallet_stack</uri><pose>6.0 12.0 0 0 0 0</pose></include>
+    <include><name>stage_6</name><uri>model://wsl_pallet_stack</uri><pose>-4 7.0 0 0 0 0</pose></include>
+    <include><name>stage_7</name><uri>model://wsl_pallet_stack</uri><pose>8 7.2 0 0 0 1.5708</pose></include>
+  </world>
+</sdf>

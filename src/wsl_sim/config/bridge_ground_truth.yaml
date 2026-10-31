@@ -1,0 +1,8 @@
+# Evaluation-only ground truth. Started only when benchmarking is enabled and
+# consumed only by wsl_benchmark. It is published under /ground_truth/ with no
+# TF so that no estimator can pick it up through the TF tree.
+- ros_topic_name: /ground_truth/odom
+  gz_topic_name: /wsl/ground_truth/odom
+  ros_type_name: nav_msgs/msg/Odometry
+  gz_type_name: gz.msgs.Odometry
+  direction: GZ_TO_ROS

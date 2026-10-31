@@ -1,0 +1,74 @@
+<?xml version="1.0"?>
+<!--
+  Pallet-rack bay 2.7 x 1.1 x 2.4 m. Origin: floor, bay centre. Loads use a
+  fixed pattern so a row of bays is deliberately repetitive.
+  Collision is one envelope box. Sensors render the visuals, and the robot can
+  only ever touch the outer envelope; per-part collision boxes made the
+  physics step the simulation bottleneck (RTF 0.51 -> 0.99 when removed).
+-->
+<sdf version="1.9">
+  <model name="wsl_rack">
+    <static>true</static>
+    <link name="link">
+      <visual name="upright_0_visual">
+        <pose>1.31 0.51 1.2 0 0 0</pose>
+        <geometry><box><size>0.08 0.08 2.4</size></box></geometry>
+        <material><ambient>0.10 0.25 0.60 1</ambient><diffuse>0.10 0.25 0.60 1</diffuse></material>
+      </visual>
+      <visual name="upright_1_visual">
+        <pose>1.31 -0.51 1.2 0 0 0</pose>
+        <geometry><box><size>0.08 0.08 2.4</size></box></geometry>
+        <material><ambient>0.10 0.25 0.60 1</ambient><diffuse>0.10 0.25 0.60 1</diffuse></material>
+      </visual>
+      <visual name="upright_2_visual">
+        <pose>-1.31 0.51 1.2 0 0 0</pose>
+        <geometry><box><size>0.08 0.08 2.4</size></box></geometry>
+        <material><ambient>0.10 0.25 0.60 1</ambient><diffuse>0.10 0.25 0.60 1</diffuse></material>
+      </visual>
+      <visual name="upright_3_visual">
+        <pose>-1.31 -0.51 1.2 0 0 0</pose>
+        <geometry><box><size>0.08 0.08 2.4</size></box></geometry>
+        <material><ambient>0.10 0.25 0.60 1</ambient><diffuse>0.10 0.25 0.60 1</diffuse></material>
+      </visual>
+      <visual name="deck_0_visual">
+        <pose>0 0 0.1 0 0 0</pose>
+        <geometry><box><size>2.7 1.1 0.06</size></box></geometry>
+        <material><ambient>0.90 0.45 0.10 1</ambient><diffuse>0.90 0.45 0.10 1</diffuse></material>
+      </visual>
+      <visual name="deck_1_visual">
+        <pose>0 0 1.05 0 0 0</pose>
+        <geometry><box><size>2.7 1.1 0.06</size></box></geometry>
+        <material><ambient>0.90 0.45 0.10 1</ambient><diffuse>0.90 0.45 0.10 1</diffuse></material>
+      </visual>
+      <visual name="deck_2_visual">
+        <pose>0 0 2 0 0 0</pose>
+        <geometry><box><size>2.7 1.1 0.06</size></box></geometry>
+        <material><ambient>0.90 0.45 0.10 1</ambient><diffuse>0.90 0.45 0.10 1</diffuse></material>
+      </visual>
+      <visual name="load_0_visual">
+        <pose>-0.65 0 0.505 0 0 0</pose>
+        <geometry><box><size>1.1 0.9 0.75</size></box></geometry>
+        <material><ambient>0.62 0.47 0.30 1</ambient><diffuse>0.62 0.47 0.30 1</diffuse></material>
+      </visual>
+      <visual name="load_1_visual">
+        <pose>0.65 0 0.505 0 0 0</pose>
+        <geometry><box><size>1.1 0.9 0.75</size></box></geometry>
+        <material><ambient>0.62 0.47 0.30 1</ambient><diffuse>0.62 0.47 0.30 1</diffuse></material>
+      </visual>
+      <visual name="load_2_visual">
+        <pose>-0.65 0 1.43 0 0 0</pose>
+        <geometry><box><size>1.1 0.9 0.7</size></box></geometry>
+        <material><ambient>0.62 0.47 0.30 1</ambient><diffuse>0.62 0.47 0.30 1</diffuse></material>
+      </visual>
+      <visual name="load_3_visual">
+        <pose>0.65 0 2.205 0 0 0</pose>
+        <geometry><box><size>1.1 0.9 0.35</size></box></geometry>
+        <material><ambient>0.62 0.47 0.30 1</ambient><diffuse>0.62 0.47 0.30 1</diffuse></material>
+      </visual>
+      <collision name="envelope">
+        <pose>0 0 1.2 0 0 0</pose>
+        <geometry><box><size>2.7 1.1 2.4</size></box></geometry>
+      </collision>
+    </link>
+  </model>
+</sdf>

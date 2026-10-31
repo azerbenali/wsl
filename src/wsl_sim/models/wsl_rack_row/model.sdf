@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<!--
+  Back-to-back double row of five bays: 13.5 m (x) x 2.3 m (y), with a 0.1 m
+  flue between the two faces. Origin: floor, row centre.
+-->
+<sdf version="1.9">
+  <model name="wsl_rack_row">
+    <static>true</static>
+    <include><name>n0</name><uri>model://wsl_rack</uri><pose>-5.4 0.6 0 0 0 0</pose></include>
+    <include><name>n1</name><uri>model://wsl_rack</uri><pose>-2.7 0.6 0 0 0 0</pose></include>
+    <include><name>n2</name><uri>model://wsl_rack</uri><pose>0 0.6 0 0 0 0</pose></include>
+    <include><name>n3</name><uri>model://wsl_rack</uri><pose>2.7 0.6 0 0 0 0</pose></include>
+    <include><name>n4</name><uri>model://wsl_rack</uri><pose>5.4 0.6 0 0 0 0</pose></include>
+    <include><name>s0</name><uri>model://wsl_rack</uri><pose>-5.4 -0.6 0 0 0 3.14159265</pose></include>
+    <include><name>s1</name><uri>model://wsl_rack</uri><pose>-2.7 -0.6 0 0 0 3.14159265</pose></include>
+    <include><name>s2</name><uri>model://wsl_rack</uri><pose>0 -0.6 0 0 0 3.14159265</pose></include>
+    <include><name>s3</name><uri>model://wsl_rack</uri><pose>2.7 -0.6 0 0 0 3.14159265</pose></include>
+    <include><name>s4</name><uri>model://wsl_rack</uri><pose>5.4 -0.6 0 0 0 3.14159265</pose></include>
+  </model>
+</sdf>

@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<!--
+  Structural column 0.4 x 0.4 x 5 m with a 1 m impact guard. Origin: floor centre.
+  Collision is one envelope box. Sensors render the visuals, and the robot can
+  only ever touch the outer envelope; per-part collision boxes made the
+  physics step the simulation bottleneck (RTF 0.51 -> 0.99 when removed).
+-->
+<sdf version="1.9">
+  <model name="wsl_pillar">
+    <static>true</static>
+    <link name="link">
+      <visual name="column_visual">
+        <pose>0 0 2.5 0 0 0</pose>
+        <geometry><box><size>0.4 0.4 5</size></box></geometry>
+        <material><ambient>0.60 0.60 0.58 1</ambient><diffuse>0.60 0.60 0.58 1</diffuse></material>
+      </visual>
+      <visual name="guard_visual">
+        <pose>0 0 0.5 0 0 0</pose>
+        <geometry><box><size>0.5 0.5 1</size></box></geometry>
+        <material><ambient>0.95 0.80 0.05 1</ambient><diffuse>0.95 0.80 0.05 1</diffuse></material>
+      </visual>
+      <collision name="envelope">
+        <pose>0 0 2.5 0 0 0</pose>
+        <geometry><box><size>0.5 0.5 5.0</size></box></geometry>
+      </collision>
+    </link>
+  </model>
+</sdf>

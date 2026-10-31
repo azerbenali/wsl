@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<!--
+  Floor pallet with a 1.1 m load, 1.2 x 1.0 x 1.25 m overall. Origin: floor centre.
+  Collision is one envelope box. Sensors render the visuals, and the robot can
+  only ever touch the outer envelope; per-part collision boxes made the
+  physics step the simulation bottleneck (RTF 0.51 -> 0.99 when removed).
+-->
+<sdf version="1.9">
+  <model name="wsl_pallet_stack">
+    <static>true</static>
+    <link name="link">
+      <visual name="pallet_visual">
+        <pose>0 0 0.075 0 0 0</pose>
+        <geometry><box><size>1.2 1 0.15</size></box></geometry>
+        <material><ambient>0.55 0.40 0.22 1</ambient><diffuse>0.55 0.40 0.22 1</diffuse></material>
+      </visual>
+      <visual name="load_visual">
+        <pose>0 0 0.7 0 0 0</pose>
+        <geometry><box><size>1.1 0.9 1.1</size></box></geometry>
+        <material><ambient>0.62 0.47 0.30 1</ambient><diffuse>0.62 0.47 0.30 1</diffuse></material>
+      </visual>
+      <collision name="envelope">
+        <pose>0 0 0.625 0 0 0</pose>
+        <geometry><box><size>1.2 1.0 1.25</size></box></geometry>
+      </collision>
+    </link>
+  </model>
+</sdf>
