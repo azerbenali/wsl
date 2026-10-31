@@ -1,0 +1,112 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Jobs run in the official multi-arch ros:jazzy image: the same apt packages
+# a developer installs on Ubuntu 24.04.
+jobs:
+  build-test:
+    name: build & test (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    container: ros:jazzy-ros-base-noble
+    steps:
+      - uses: actions/checkout@v4
+      - name: Resolve dependencies
+        run: |
+          apt-get update
+          rosdep update --rosdistro jazzy
+          rosdep install --from-paths src --ignore-src -y --rosdistro jazzy
+      - name: Build
+        shell: bash
+        run: |
+          source /opt/ros/jazzy/setup.bash
+          colcon build --symlink-install --event-handlers console_cohesion+
+      - name: Test
+        shell: bash
+        run: |
+          source /opt/ros/jazzy/setup.bash
+          colcon test --event-handlers console_cohesion+
+          colcon test-result --verbose
+      - name: Perception micro-benchmark
+        run: ./build/wsl_perception/pipeline_benchmark 200 | tee pipeline_benchmark.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-${{ matrix.arch }}
+          path: |
+            build/*/test_results
+            pipeline_benchmark.json
+
+  sanitizers:
+    name: perception (ASan + UBSan)
+    runs-on: ubuntu-24.04
+    container: ros:jazzy-ros-base-noble
+    steps:
+      - uses: actions/checkout@v4
+      - name: Resolve dependencies
+        run: |
+          apt-get update
+          rosdep update --rosdistro jazzy
+          rosdep install --from-paths src --ignore-src -y --rosdistro jazzy
+      - name: Build and test with sanitizers
+        shell: bash
+        run: |
+          source /opt/ros/jazzy/setup.bash
+          colcon build --packages-up-to wsl_perception \
+            --cmake-args -DWSL_SANITIZE=ON -DCMAKE_BUILD_TYPE=Debug
+          # The launch test runs ROS executables whose libraries are not
+          # sanitizer-instrumented; the algorithm tests are what matter here.
+          colcon test --packages-select wsl_perception --ctest-args -E launch
+          colcon test-result --verbose
+
+  lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install linters
+        run: sudo apt-get update && sudo apt-get install -y clang-format-18 flake8
+      - name: clang-format
+        run: git ls-files '*.cpp' '*.hpp' | xargs clang-format-18 --dry-run --Werror
+      - name: flake8
+        run: flake8 src
+
+  simulation-smoke:
+    name: headless simulation smoke test
+    needs: build-test
+    runs-on: ubuntu-24.04
+    container: ros:jazzy-ros-base-noble
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Resolve dependencies
+        run: |
+          apt-get update
+          apt-get install -y libegl-mesa0 libgl1-mesa-dri
+          rosdep update --rosdistro jazzy
+          rosdep install --from-paths src --ignore-src -y --rosdistro jazzy
+      - name: Build
+        shell: bash
+        run: |
+          source /opt/ros/jazzy/setup.bash
+          colcon build --cmake-args -DWSL_SIM_TESTS=ON
+      - name: End-to-end smoke test (Mesa llvmpipe software rendering)
+        shell: bash
+        run: |
+          source /opt/ros/jazzy/setup.bash
+          colcon test --packages-select wsl_sim --ctest-args -R system_smoke
+          colcon test-result --verbose
