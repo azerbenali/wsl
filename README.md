@@ -79,7 +79,7 @@
       <b>Warehouse</b><br/><sub>40 × 30 m, top down</sub>
     </td>
     <td width="50%" align="center">
-      <img src="docs/media/nav-goal.gif" alt="Ubuntu 24.04 terminal sends a NavigateToPose goal around a pillar, then a 2D Goal Pose from RViz sends the robot into aisle A3" width="100%"/><br/>
+      <img src="docs/media/Nav2.gif" alt="Ubuntu 24.04 terminal sends a NavigateToPose goal around a pillar, then a 2D Goal Pose from RViz sends the robot into aisle A3" width="100%"/><br/>
       <b>Nav2</b><br/><sub>Goal from the terminal, then from RViz: global plan, MPPI local plan, costmaps</sub>
     </td>
   </tr>
