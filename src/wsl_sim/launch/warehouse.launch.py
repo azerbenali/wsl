@@ -1,9 +1,9 @@
 # Copyright 2026 Azer Ben Ali
 # SPDX-License-Identifier: Apache-2.0
 """
-Full WSL system: Gazebo warehouse, robot, ROS-Gazebo bridge, perception, SLAM, RViz.
+Full WSL system: Gazebo warehouse, robot, ROS-Gazebo bridge, perception, SLAM, Nav2, RViz.
 
-    ros2 launch wsl_sim warehouse.launch.py [headless:=true] [slam:=false] ...
+    ros2 launch wsl_sim warehouse.launch.py [headless:=true] [slam:=false] [nav:=true] ...
 
 Startup ordering needs no sleeps: ros_gz_sim `create` waits for the world's
 create service and for the latched robot_description; the perception node and
@@ -15,8 +15,8 @@ import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import (AppendEnvironmentVariable, DeclareLaunchArgument,
-                            IncludeLaunchDescription)
-from launch.conditions import IfCondition
+                            IncludeLaunchDescription, OpaqueFunction)
+from launch.conditions import evaluate_condition_expression, IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import (Command, LaunchConfiguration, PathJoinSubstitution,
                                   PythonExpression)
@@ -30,6 +30,7 @@ ARGUMENTS = [
     ('rviz', 'true', 'Start RViz.'),
     ('perception', 'true', 'Start the point-cloud perception node.'),
     ('slam', 'true', 'Start RTAB-Map. RViz uses map as fixed frame if true, odom otherwise.'),
+    ('nav', 'false', 'Start Nav2 to drive to goals on the SLAM map. Requires slam:=true.'),
     ('ground_truth', 'false', 'Publish evaluation-only ground truth on /ground_truth/odom.'),
     ('x', '-12.0', 'Spawn x [m] in the world frame.'),
     ('y', '9.0', 'Spawn y [m] in the world frame.'),
@@ -46,6 +47,17 @@ ROBOT_ARGS = [
     'lidar_channels', 'lidar_horizontal_samples', 'lidar_rate_hz', 'camera_rate_hz',
     'odom_wheel_radius_scale', 'odom_wheel_separation_scale', 'ground_truth',
 ]
+
+
+def check_nav_requires_slam(context):
+    """Nav2 plans on /rtabmap/map and localises through RTAB-Map's map -> odom."""
+    nav = evaluate_condition_expression(context, [LaunchConfiguration('nav')])
+    slam = evaluate_condition_expression(context, [LaunchConfiguration('slam')])
+    if nav and not slam:
+        raise RuntimeError(
+            'nav:=true requires slam:=true: Nav2 plans on the RTAB-Map map (/rtabmap/map) '
+            'and needs its map -> odom transform. There is no other localisation.')
+    return []
 
 
 def generate_launch_description():
@@ -100,6 +112,11 @@ def generate_launch_description():
             get_package_share_directory('wsl_slam'), 'launch', 'slam.launch.py')),
         condition=IfCondition(arg('slam')))
 
+    navigation = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(os.path.join(
+            get_package_share_directory('wsl_navigation'), 'launch', 'navigation.launch.py')),
+        condition=IfCondition(arg('nav')))
+
     rviz = Node(
         package='rviz2', executable='rviz2', output='log', condition=IfCondition(arg('rviz')),
         arguments=['-d', os.path.join(sim_share, 'rviz', 'warehouse.rviz'),
@@ -113,4 +130,6 @@ def generate_launch_description():
          # Parent of the package share, so package://wsl_description/... resolves in Gazebo.
          AppendEnvironmentVariable('GZ_SIM_RESOURCE_PATH', os.path.dirname(
              get_package_share_directory('wsl_description'))),
-         gazebo, robot_state_publisher, spawn, bridge, ground_truth_bridge, perception, slam, rviz])
+         OpaqueFunction(function=check_nav_requires_slam),
+         gazebo, robot_state_publisher, spawn, bridge, ground_truth_bridge, perception, slam,
+         navigation, rviz])
