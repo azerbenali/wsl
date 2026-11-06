@@ -12,7 +12,6 @@
 [![C++17](https://img.shields.io/badge/C%2B%2B-17-00599C?logo=cplusplus&logoColor=white)](#supported-platforms)
 [![Python 3](https://img.shields.io/badge/Python-3-3776AB?logo=python&logoColor=white)](#benchmark)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue)](LICENSE)
-![Version](https://img.shields.io/badge/version-0.2.0-brightgreen)
 
 [Quick start](#quick-start) ·
 [Demo](#demo) ·
