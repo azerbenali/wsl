@@ -12,7 +12,7 @@
 [![C++17](https://img.shields.io/badge/C%2B%2B-17-00599C?logo=cplusplus&logoColor=white)](#supported-platforms)
 [![Python 3](https://img.shields.io/badge/Python-3-3776AB?logo=python&logoColor=white)](#benchmark)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue)](LICENSE)
-![Version](https://img.shields.io/badge/version-0.1.0-brightgreen)
+![Version](https://img.shields.io/badge/version-0.2.0-brightgreen)
 
 [Quick start](#quick-start) ·
 [Demo](#demo) ·
@@ -280,6 +280,6 @@ navigation tests on amd64 and arm64.
 
 <div align="center">
 
-© 2026 Azer Ben Ali · [Apache-2.0](LICENSE) · v0.1.0
+© 2026 Azer Ben Ali · [Apache-2.0](LICENSE) · v0.2.0
 
 </div>
