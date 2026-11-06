@@ -6,6 +6,7 @@
 
 [![ROS 2 Jazzy](https://img.shields.io/badge/ROS_2-Jazzy-22314E?logo=ros&logoColor=white)](#supported-platforms)
 [![Gazebo Harmonic](https://img.shields.io/badge/Gazebo-Harmonic-F58113)](#supported-platforms)
+[![Nav2](https://img.shields.io/badge/Nav2-MPPI_Omni-2E7D32)](#navigation)
 [![Ubuntu 24.04](https://img.shields.io/badge/Ubuntu-24.04_LTS-E95420?logo=ubuntu&logoColor=white)](#ubuntu-2404)
 [![macOS](https://img.shields.io/badge/macOS-Intel_%7C_Apple_Silicon-000000?logo=apple&logoColor=white)](#macos)
 [![C++17](https://img.shields.io/badge/C%2B%2B-17-00599C?logo=cplusplus&logoColor=white)](#supported-platforms)
@@ -15,6 +16,7 @@
 
 [Quick start](#quick-start) ·
 [Demo](#demo) ·
+[Navigation](#navigation) ·
 [Testing](#testing) ·
 [Docs](#documentation)
 
@@ -36,6 +38,7 @@
 | **World** | 40 × 30 m warehouse with repetitive racks, pillars and dead ends |
 | **Perception** | C++ / PCL point-cloud pipeline: filtering, ground removal, obstacle clusters |
 | **SLAM** | RTAB-Map 3D LiDAR graph SLAM with ICP and loop closure |
+| **Navigation** | Nav2 on the SLAM map: click a goal, Smac 2D plans, omnidirectional MPPI drives around racks and pillars |
 | **Benchmarks** | Every estimate scored against ground truth: ATE, RPE, drift, latency, CPU |
 
 ## Demo
@@ -75,6 +78,10 @@
     <td width="50%" align="center">
       <img src="docs/media/warehouse-overview.png" alt="Top-down view of the warehouse" width="100%"/><br/>
       <b>Warehouse</b><br/><sub>40 × 30 m, top down</sub>
+    </td>
+    <td width="50%" align="center">
+      <img src="docs/media/nav-goal.gif" alt="RViz: the robot plans around a pillar and drives to a clicked goal" width="100%"/><br/>
+      <b>Nav2</b><br/><sub>Goal from RViz, global plan, MPPI local plan, costmaps</sub>
     </td>
   </tr>
 </table>
@@ -139,11 +146,42 @@ The same dev container works on Windows.
 
 
 
+## Navigation
+
+```bash
+ros2 launch wsl_sim warehouse.launch.py nav:=true
+```
+
+| Step | In RViz |
+|:---:|---|
+| 1 | Wait until the **Navigation 2** panel shows navigation *active* |
+| 2 | Click **2D Goal Pose** in the toolbar |
+| 3 | Click the target on the map and drag towards the heading the robot should have |
+
+The robot plans around racks and pillars and drives there. From the command line
+(`map` starts at the spawn pose, so world (−8.5, 13.4) is (3.5, 4.4)):
+
+```bash
+ros2 action send_goal /navigate_to_pose nav2_msgs/action/NavigateToPose \
+  "{pose: {header: {frame_id: map}, pose: {position: {x: 3.5, y: 4.4}, orientation: {z: 0.7071, w: 0.7071}}}}"
+```
+
+Design, parameters and troubleshooting: [docs/navigation.md](docs/navigation.md).
+
 ## Launch options
 
 ```bash
 ros2 launch wsl_sim warehouse.launch.py headless:=true rviz:=false
 ```
+
+| Option | Default | Effect |
+|---|---|---|
+| `headless` | `false` | Gazebo server only; sensors still render offscreen |
+| `rviz` | `true` | Start RViz |
+| `perception` | `true` | Start the point-cloud perception node |
+| `slam` | `true` | Start RTAB-Map |
+| `nav` | `false` | Start Nav2 (requires `slam:=true`) |
+| `ground_truth` | `false` | Publish evaluation-only ground truth |
 
 
 ## Benchmark
@@ -187,6 +225,7 @@ colcon test && colcon test-result --verbose
 | `wsl_benchmark` | pytest: metrics against analytic results, evaluation end to end, scenarios, pure pursuit |
 | `wsl_description` | URDF structure, inertia physics, mesh checks (collisions match, roller direction, no z-fighting), LiDAR clearance, drive limits, frame conventions, `check_urdf` |
 | `wsl_sim` | Asset and robot mesh resolution, bridge directions, ground-truth isolation, bridge ↔ robot topic consistency |
+| `wsl_navigation` | Nav2 config against the robot model and the system: frames, no AMCL / map_server, footprint = chassis, limits inside MecanumDrive, MPPI Omni, real topics, `/cmd_vel` chain ends in `Twist` |
 
 End-to-end smoke test (launches the full system headless and checks sensors, frames,
 rates, TF authorities and driving):
@@ -195,13 +234,20 @@ rates, TF authorities and driving):
 colcon build --cmake-args -DWSL_SIM_TESTS=ON && colcon test --packages-select wsl_sim
 ```
 
+End-to-end navigation test (full system with Nav2; drives to a goal around a pillar
+and checks the outcome and the final pose). Run it on its own, with the overlay sourced:
+
+```bash
+source install/setup.bash && colcon test --packages-select wsl_navigation
+```
+
 | Flag | Enables |
 |---|---|
 | `-DWSL_SANITIZE=ON` | ASan + UBSan |
 | `-DWSL_BUILD_FUZZERS=ON` | libFuzzer target for the PointCloud2 parser (clang) |
 
-CI runs build, tests, sanitizers, clang-format, flake8 and the simulation smoke test
-on amd64 and arm64.
+CI runs build, tests, sanitizers, clang-format, flake8 and the simulation smoke and
+navigation tests on amd64 and arm64.
 
 ## Supported platforms
 
@@ -211,6 +257,7 @@ on amd64 and arm64.
 | ROS | ROS 2 Jazzy Jalisco |
 | Simulator | Gazebo Harmonic (gz-sim 8) via `ros_gz` |
 | SLAM | RTAB-Map (`rtabmap_slam`), PCL ICP backend |
+| Navigation | Nav2 (Jazzy): Smac 2D planner, MPPI controller |
 | Languages | C++17 (perception), Python 3 (launch, benchmark) |
 | Architectures | amd64 and arm64 |
 
@@ -227,6 +274,7 @@ on amd64 and arm64.
 |---|---|
 | [Architecture](docs/architecture.md) | Nodes, data flow, performance profiling |
 | [Benchmarking](docs/benchmarking.md) | Metrics and methodology |
+| [Navigation](docs/navigation.md) | Nav2 architecture, design decisions, parameters, troubleshooting |
 
 ---
 

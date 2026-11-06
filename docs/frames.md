@@ -44,6 +44,10 @@ world                      Gazebo; ground truth only, never on /tf
 | `odom → base_footprint` | MecanumDrive (bridged `/wsl/tf`) | The only odometry source. Nothing else bridges `/tf`. |
 | `base_* → sensors` | robot_state_publisher | Generated from the same URDF Gazebo uses, so simulated sensor poses and TF cannot disagree. |
 
+Nav2 (`nav:=true`) only reads TF: it plans in `map`, controls in `odom` and uses
+`base_footprint` as the robot frame. It runs without AMCL, so RTAB-Map stays the only
+authority for `map → odom` ([navigation](navigation.md)).
+
 Ground truth is deliberately **not** a TF frame: `OdometryPublisher` writes its TF to
 `/wsl/ground_truth/tf`, which is never bridged. Only `/ground_truth/odom` reaches ROS, and
 only when `ground_truth:=true`.
@@ -59,6 +63,9 @@ Automated:
   `lidar_link`, `camera_optical_frame` and `imu_link`, that the lowest LiDAR ring hits the floor
   0.66 m below `lidar_link`, that the LiDAR does not see the robot, and that without SLAM nothing
   publishes a transform from `map`.
+- `wsl_navigation/test/test_nav2_config.py` checks that the Nav2 frames match the frame table
+  above; `test_navigate_to_goal.launch.py` checks at runtime that with Nav2 running only the
+  bridge, robot_state_publisher and rtabmap publish `/tf`.
 
 Manual:
 

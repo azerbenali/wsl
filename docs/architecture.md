@@ -1,7 +1,7 @@
 # Architecture
 
 WSL is a simulated warehouse robot plus the software that perceives, maps and
-measures it. Five packages, each owning one responsibility:
+measures it. Six packages, each owning one responsibility:
 
 | Package | Owns | Contains code? |
 |---|---|---|
@@ -9,11 +9,12 @@ measures it. Five packages, each owning one responsibility:
 | `wsl_sim` | Simulation runtime: warehouse world and assets, ROS–Gazebo bridge, full-system launch, RViz | World/launch/config + tests |
 | `wsl_perception` | 3D point-cloud processing: validation, filtering, ground removal, clustering | C++ library + node |
 | `wsl_slam` | RTAB-Map configuration and launch | Config + launch only |
+| `wsl_navigation` | Nav2 configuration and launch: planning and control on the SLAM map | Config + launch + tests |
 | `wsl_benchmark` | Evaluation: scenarios, route driving, recording, metrics | Python |
 
-`wsl_slam` has no code on purpose: RTAB-Map is mature, and the engineering work
-is choosing its inputs and parameters. Forking it would add maintenance without
-adding capability.
+`wsl_slam` and `wsl_navigation` have no code on purpose: RTAB-Map and Nav2 are
+mature, and the engineering work is choosing their inputs and parameters. Forking
+them would add maintenance without adding capability.
 
 ## Data flow
 
@@ -34,6 +35,7 @@ flowchart LR
     R[RViz]
     REC[benchmark recorder]
     RF[route_follower]
+    N[Nav2<br/>Smac 2D, MPPI Omni,<br/>velocity_smoother]
 
     DD -- /odom, /tf odom→base_footprint --> B
     L -- /lidar/points --> B
@@ -49,23 +51,28 @@ flowchart LR
     GTB -.-> REC
     GTB -.-> RF
     RF -- /cmd_vel --> B
+    S == /rtabmap/map, map→odom ==> N
+    B == /lidar/points, /odom ==> N
+    R == /goal_pose ==> N
+    N == /cmd_vel ==> B
     B -- /cmd_vel --> DD
     P --> REC
     S --> REC
 ```
 
-Dotted edges exist only in benchmark runs (`ground_truth:=true`).
+Dotted edges exist only in benchmark runs (`ground_truth:=true`), thick edges only
+with `nav:=true` ([navigation](navigation.md)).
 
 ## Interfaces
 
 | Topic | Type | Producer | Consumers |
 |---|---|---|---|
-| `/cmd_vel` | `geometry_msgs/Twist` | teleop / `route_follower` | MecanumDrive (via bridge) |
-| `/odom` | `nav_msgs/Odometry` | MecanumDrive | recorder |
+| `/cmd_vel` | `geometry_msgs/Twist` | teleop / `route_follower` / Nav2 `velocity_smoother` | MecanumDrive (via bridge) |
+| `/odom` | `nav_msgs/Odometry` | MecanumDrive | recorder, Nav2 |
 | `/tf` | `tf2_msgs/TFMessage` | MecanumDrive (`odom→base_footprint`), robot_state_publisher (wheels), rtabmap (`map→odom`) | all |
 | `/tf_static` | `tf2_msgs/TFMessage` | robot_state_publisher | all |
 | `/joint_states` | `sensor_msgs/JointState` | Gazebo JointStatePublisher | robot_state_publisher |
-| `/lidar/points` | `sensor_msgs/PointCloud2` (`lidar_link`, x y z intensity ring, organised 16×900) | gpu_lidar | perception, rtabmap, RViz, recorder |
+| `/lidar/points` | `sensor_msgs/PointCloud2` (`lidar_link`, x y z intensity ring, organised 16×900) | gpu_lidar | perception, rtabmap, RViz, recorder, Nav2 local costmap |
 | `/camera/image_raw` | `sensor_msgs/Image` (`rgb8`, `camera_optical_frame`) | camera | RViz, recorder |
 | `/camera/camera_info` | `sensor_msgs/CameraInfo` | camera | recorder |
 | `/imu/data` | `sensor_msgs/Imu` (`imu_link`) | IMU | recorder |
@@ -73,11 +80,27 @@ Dotted edges exist only in benchmark runs (`ground_truth:=true`).
 | `/perception/obstacle_points` | `PointCloud2` (`base_footprint`) | perception | RViz |
 | `/perception/clusters` | `vision_msgs/Detection3DArray` | perception | recorder |
 | `/perception/markers` | `visualization_msgs/MarkerArray` | perception | RViz |
-| `/rtabmap/map` | `nav_msgs/OccupancyGrid` | rtabmap | RViz |
+| `/rtabmap/map` | `nav_msgs/OccupancyGrid` | rtabmap | RViz, Nav2 global costmap |
 | `/rtabmap/mapPath` | `nav_msgs/Path` (optimised graph poses) | rtabmap | RViz, recorder |
 | `/rtabmap/info` | `rtabmap_msgs/Info` | rtabmap | recorder |
 | `/ground_truth/odom` | `nav_msgs/Odometry` (`world`) | Gazebo OdometryPublisher | recorder, route_follower |
 | `/diagnostics` | `diagnostic_msgs/DiagnosticArray` | perception | operators |
+| `/goal_pose` | `geometry_msgs/PoseStamped` (`map`) | RViz 2D Goal Pose | `bt_navigator` |
+| `/cmd_vel_nav` | `geometry_msgs/Twist` | `controller_server` (MPPI), `behavior_server` | `velocity_smoother` |
+| `/plan` | `nav_msgs/Path` (`map`) | `planner_server` | RViz |
+| `/optimal_trajectory` | `nav_msgs/Path` (`odom`) | `controller_server` (MPPI) | RViz |
+| `/global_costmap/costmap` | `nav_msgs/OccupancyGrid` (`map`) | global costmap | RViz |
+| `/local_costmap/costmap` | `nav_msgs/OccupancyGrid` (`odom`) | local costmap | RViz |
+| `/local_costmap/published_footprint` | `geometry_msgs/PolygonStamped` | local costmap | RViz, `behavior_server` |
+
+Nav2 topics exist only with `nav:=true`. Nav2 actions:
+
+| Action | Type | Server | Clients |
+|---|---|---|---|
+| `/navigate_to_pose` | `nav2_msgs/NavigateToPose` | `bt_navigator` | RViz Navigation 2 panel, CLI, tests |
+| `/compute_path_to_pose` | `nav2_msgs/ComputePathToPose` | `planner_server` | `bt_navigator` |
+| `/follow_path` | `nav2_msgs/FollowPath` | `controller_server` | `bt_navigator` |
+| `/spin`, `/backup`, `/drive_on_heading`, `/wait` | `nav2_msgs/Spin`, … | `behavior_server` | `bt_navigator` (recovery) |
 
 Gazebo-side names live under `/wsl/`; `wsl_sim/config/bridge.yaml` is the only
 place where they are mapped to the ROS names above. A test checks that every
@@ -175,6 +198,24 @@ depends on PCL and the `sensor_msgs` type, not on rclcpp, so every stage is
 unit-tested with synthetic scans. The node adds TF, parameters, diagnostics and
 publishing.
 
+**Navigation localises with SLAM, not AMCL.** Nav2 runs without AMCL and without
+map_server: RTAB-Map already owns `map → odom` and builds `/rtabmap/map`, which the
+global costmap reads directly. A second localiser would compete for the same
+transform. Nav2 publishes no TF at all, so `nav:=true` requires `slam:=true`.
+
+**Omnidirectional control, heading kept on the path.** MPPI uses its `Omni` model
+and samples vx, vy and wz, so the mecanum base can strafe in aisles. With
+independent axis limits, crabbing is faster than driving straight, and MPPI crabbed
+for most of every drive until PathAngleCritic was tightened to 0.35 rad (with
+TwirlingCritic halved, so turning is not made expensive). The robot
+now faces its path on open legs and strafes when it swings into an aisle.
+
+**One velocity chain into the bridge.** MPPI and the recovery behaviours publish on
+`/cmd_vel_nav`; `velocity_smoother` limits it and is the only Nav2 publisher on
+`/cmd_vel`, as unstamped `Twist`, which the bridge and MecanumDrive expect. Its
+limits are inside the MecanumDrive limits, and MPPI plans with the same limits.
+Details: [navigation](navigation.md).
+
 **Unidirectional bridging.** Every bridge entry is `GZ_TO_ROS` or `ROS_TO_GZ`.
 Bidirectional `/tf` bridging, as in the reference, risks loops and duplicate
 authorities.
@@ -239,6 +280,9 @@ It is not optimized further while it uses < 10% of the sensor period.
 | SLAM absent | Route follower starts after `map_frame_timeout_s` with a warning; the recorder evaluates whatever trajectories exist. |
 | Robot stuck / route too slow | Route follower aborts (`stuck`: < 0.5 m progress in 30 s; `timeout`), publishes the outcome, and the run is still written. |
 | Unknown scenario / bad scenario file | Launch fails listing the available scenarios; unknown robot arguments in a scenario are rejected. |
+| `nav:=true` without SLAM | Launch fails before starting anything: Nav2 needs RTAB-Map's map and `map → odom`. |
+| `map → odom` late (RTAB-Map busy) | MPPI waits up to 0.5 s for it instead of aborting the goal; a TF error is not recoverable in the default behaviour tree. |
+| Planning or control fails | The default NavigateToPose tree clears costmaps, spins, waits and backs up, then retries (up to 6 times). |
 
 ## Configuration ownership
 
@@ -250,6 +294,7 @@ It is not optimized further while it uses < 10% of the sensor period.
 | World layout, physics rate | `wsl_sim/worlds/warehouse.sdf` | `world:=` |
 | Perception parameters | `wsl_perception/config/perception.yaml` | `ros2 param set` at runtime (validated) |
 | SLAM tuning | `wsl_slam/config/rtabmap.yaml` | – |
+| Navigation tuning | `wsl_navigation/config/nav2.yaml` | `params_file:=` of `navigation.launch.py` |
 | Experiments | `wsl_benchmark/config/scenarios/*.yaml` | `scenario:=` |
 
 ## Testing strategy
@@ -263,4 +308,6 @@ It is not optimized further while it uses < 10% of the sensor period.
 | Asset consistency | Model URIs, bridge directions, GT isolation, bridge↔robot topic match | `wsl_sim/test/test_sim_assets.py` |
 | Node | Real `perception_node` with real TF: detection, atomic reconfiguration, startup rejection | `test_perception_node.launch.py` |
 | System | Headless full launch: sensors, frames, rates, TF authorities, driving (opt-in) | `test_system_smoke.launch.py` |
+| Navigation config | Nav2 parameters against the robot model, `frames.md`, the bridge: footprint, limits, frames, topics, velocity chain | `wsl_navigation/test/test_nav2_config.py` |
+| Navigation | Headless full launch with Nav2: activation, `/cmd_vel` and TF publishers, a goal around a pillar reached within tolerance (opt-in) | `test_navigate_to_goal.launch.py` |
 | Experiment | Scenario runs against ground truth | `ros2 launch wsl_benchmark benchmark.launch.py` |
