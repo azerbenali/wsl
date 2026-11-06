@@ -1,0 +1,375 @@
+# Copyright 2026 Azer Ben Ali
+# SPDX-License-Identifier: Apache-2.0
+#
+# Nav2 
+
+bt_navigator:
+  ros__parameters:
+    use_sim_time: true
+    global_frame: map
+    robot_base_frame: base_footprint
+    odom_topic: /odom
+    bt_loop_duration: 10
+    default_server_timeout: 20
+    wait_for_service_timeout: 1000
+    action_server_result_timeout: 900.0
+    # default_nav_to_pose_bt_xml is left unset: Nav2's own
+    # navigate_to_pose_w_replanning_and_recovery.xml replans at 1 Hz and
+    # recovers by clearing costmaps, spinning, waiting and backing up.
+    # navigate_through_poses is the Nav2 default navigator set; it is not used
+    # in this phase.
+    navigators: ["navigate_to_pose", "navigate_through_poses"]
+    navigate_to_pose:
+      plugin: "nav2_bt_navigator::NavigateToPoseNavigator"
+    navigate_through_poses:
+      plugin: "nav2_bt_navigator::NavigateThroughPosesNavigator"
+    error_code_names:
+      - compute_path_error_code
+      - follow_path_error_code
+
+controller_server:
+  ros__parameters:
+    use_sim_time: true
+    controller_frequency: 20.0
+    costmap_update_timeout: 0.30
+    # The thresholds zero out tiny odometry velocities fed to the controller.
+    # The robot is holonomic, so y must not be filtered like a diff-drive's.
+    min_x_velocity_threshold: 0.001
+    min_y_velocity_threshold: 0.001
+    min_theta_velocity_threshold: 0.001
+    failure_tolerance: 0.3
+    odom_topic: /odom
+    enable_stamped_cmd_vel: false
+    progress_checker_plugins: ["progress_checker"]
+    goal_checker_plugins: ["goal_checker"]
+    controller_plugins: ["FollowPath"]
+
+    progress_checker:
+      plugin: "nav2_controller::SimpleProgressChecker"
+      required_movement_radius: 0.5
+      movement_time_allowance: 10.0
+    # Stateful: once inside the xy tolerance the robot only has to finish
+    # rotating, it is not sent back when the rotation shifts it a little.
+    goal_checker:
+      plugin: "nav2_controller::SimpleGoalChecker"
+      stateful: true
+      xy_goal_tolerance: 0.25
+      yaw_goal_tolerance: 0.25
+
+    FollowPath:
+      plugin: "nav2_mppi_controller::MPPIController"
+      # Omni samples vx, vy and wz: the robot can strafe to centre itself in
+      # an aisle or slip past a pillar without turning.
+      motion_model: "Omni"
+      # model_dt = 1 / controller_frequency. 56 steps = 2.8 s horizon, 1.7 m at
+      # vx_max, which prune_distance covers.
+      time_steps: 56
+      model_dt: 0.05
+      batch_size: 2000
+      iteration_count: 1
+      prune_distance: 1.7
+      # How long MPPI waits for map -> odom when it moves the goal and the path
+      # into the odom frame. RTAB-Map future-dates map -> odom by 0.1 s
+      # (tf_tolerance) every 50 ms, but while it integrates a new node under
+      # load the publication can pause for > 0.2 s. With 0.1 s this happened
+      # at goal start and aborted the goal (a TF error is not recoverable in
+      # the default tree); waiting delays one control cycle instead.
+      transform_tolerance: 0.5
+      temperature: 0.3
+      gamma: 0.015
+      vx_std: 0.2
+      vy_std: 0.2
+      wz_std: 0.4
+      # Same limits as velocity_smoother, so MPPI plans only commands the
+      # smoother passes through unchanged.
+      vx_max: 0.6
+      vx_min: -0.3
+      vy_max: 0.4
+      wz_max: 1.0
+      ax_max: 0.5
+      ax_min: -0.5
+      ay_max: 0.5
+      ay_min: -0.5
+      az_max: 0.8
+      # Publishes the chosen trajectory on /optimal_trajectory (the local plan
+      # in RViz) and a subset of the sampled ones on /trajectories.
+      visualize: true
+      regenerate_noises: true
+      TrajectoryVisualizer:
+        trajectory_step: 5
+        time_step: 3
+      critics: [
+        "ConstraintCritic", "CostCritic", "GoalCritic", "GoalAngleCritic",
+        "PathAlignCritic", "PathFollowCritic", "PathAngleCritic",
+        "PreferForwardCritic", "TwirlingCritic"]
+      ConstraintCritic:
+        enabled: true
+        cost_power: 1
+        cost_weight: 4.0
+      # Full rectangular footprint check: in 3 m aisles and the 0.9 m passage
+      # in A3 a circle around the 0.82 x 0.68 m robot would be either too
+      # loose or too wide. The check runs only where the centre cost says the
+      # footprint could touch something, which needs inflation_radius >=
+      # circumscribed radius (0.53 m) in the local costmap.
+      CostCritic:
+        enabled: true
+        cost_power: 1
+        cost_weight: 3.81
+        near_collision_cost: 253
+        critical_cost: 300.0
+        consider_footprint: true
+        collision_cost: 1000000.0
+        near_goal_distance: 1.0
+        trajectory_point_step: 2
+      GoalCritic:
+        enabled: true
+        cost_power: 1
+        cost_weight: 5.0
+        threshold_to_consider: 1.4
+      GoalAngleCritic:
+        enabled: true
+        cost_power: 1
+        cost_weight: 3.0
+        threshold_to_consider: 0.5
+      # Path critics at the Nav2 weights. PathAlign is the strongest, so the
+      # robot tracks the planned line, which Smac keeps in the middle of
+      # aisles (cost_travel_multiplier).
+      PathAlignCritic:
+        enabled: true
+        cost_power: 1
+        cost_weight: 14.0
+        max_path_occupancy_ratio: 0.05
+        trajectory_point_step: 4
+        threshold_to_consider: 0.5
+        offset_from_furthest: 20
+        use_path_orientations: false
+      PathFollowCritic:
+        enabled: true
+        cost_power: 1
+        cost_weight: 5.0
+        offset_from_furthest: 5
+        threshold_to_consider: 1.4
+      # Mode 0: penalises heading more than max_angle_to_furthest away from
+      # the path ahead. With independent vx and vy limits, crabbing at ~35 deg
+      # is faster than driving straight, and with the Nav2 default band of
+      # 1.0 rad MPPI crabbed for > 90 % of a drive (|vy| at its 0.4 m/s
+      # limit). A 0.35 rad band keeps the robot facing its path, so the
+      # forward camera looks where it goes, and leaves vy for corrections,
+      # pillars and tight spots (measured peak |vy| 0.23 m/s on open legs).
+      PathAngleCritic:
+        enabled: true
+        cost_power: 1
+        cost_weight: 4.0
+        offset_from_furthest: 4
+        threshold_to_consider: 0.5
+        max_angle_to_furthest: 0.35
+        mode: 0
+      # Penalises only vx < 0: reversing is allowed but strafing is not
+      # discouraged.
+      PreferForwardCritic:
+        enabled: true
+        cost_power: 1
+        cost_weight: 5.0
+        threshold_to_consider: 0.5
+      # For holonomic models: stops MPPI from spinning while it translates,
+      # which wz noise otherwise allows at no cost. Half the usual 10, so that
+      # turning to face the path (PathAngleCritic) is not made expensive.
+      TwirlingCritic:
+        enabled: true
+        cost_power: 1
+        cost_weight: 5.0
+
+local_costmap:
+  local_costmap:
+    ros__parameters:
+      use_sim_time: true
+      update_frequency: 5.0
+      publish_frequency: 2.0
+      global_frame: odom
+      robot_base_frame: base_footprint
+      rolling_window: true
+      # 6 x 6 m: covers the 1.7 m MPPI horizon in every direction with room
+      # for the footprint and inflation.
+      width: 6
+      height: 6
+      resolution: 0.05
+      # Chassis bounding box from wsl_description (0.719 x 0.57862 m, centred
+      # on base_footprint). The 5 cm padding covers what sticks out of it: the
+      # wheel collision spheres by 4.2 cm at the sides, the camera by 3.1 cm
+      # at the front.
+      footprint: "[[0.3595, 0.28931], [0.3595, -0.28931], [-0.3595, -0.28931], [-0.3595, 0.28931]]"
+      footprint_padding: 0.05
+      plugins: ["voxel_layer", "inflation_layer"]
+      # 3D marking: a ray from a higher ring that passes above a low obstacle
+      # does not clear it, unlike the 2D obstacle layer, so low obstacles the
+      # LiDAR saw from afar stay marked inside its blind zone close to the
+      # robot (the lowest ring reaches the floor only 2.5 m out).
+      voxel_layer:
+        plugin: "nav2_costmap_2d::VoxelLayer"
+        enabled: true
+        publish_voxel_map: false
+        # 10 x 0.1 m voxels: the grid spans exactly the marked height band.
+        origin_z: 0.0
+        z_resolution: 0.1
+        z_voxels: 10
+        max_obstacle_height: 1.0
+        mark_threshold: 0
+        observation_sources: lidar
+        lidar:
+          topic: /lidar/points
+          data_type: "PointCloud2"
+          # Heights are in the costmap frame (odom), where the floor is z = 0.
+          # Floor returns of the lowest ring (z = 0 +- a few mm with the 1 cm
+          # range noise) fall below 0.10 m; racks, pallets, pillars and walls
+          # all reach above it. The robot is 0.70 m tall (LiDAR top), so
+          # anything above 1.0 m cannot touch it.
+          min_obstacle_height: 0.10
+          max_obstacle_height: 1.0
+          marking: true
+          clearing: true
+          obstacle_max_range: 3.0
+          obstacle_min_range: 0.0
+          raytrace_max_range: 3.5
+          raytrace_min_range: 0.0
+      # Must reach the circumscribed radius (0.53 m with padding) for the
+      # MPPI footprint check shortcut; beyond it costs fall off gently so the
+      # robot keeps to the middle of 3 m aisles.
+      inflation_layer:
+        plugin: "nav2_costmap_2d::InflationLayer"
+        inflation_radius: 0.70
+        cost_scaling_factor: 3.0
+      always_send_full_costmap: true
+
+global_costmap:
+  global_costmap:
+    ros__parameters:
+      use_sim_time: true
+      update_frequency: 1.0
+      publish_frequency: 1.0
+      global_frame: map
+      robot_base_frame: base_footprint
+      footprint: "[[0.3595, 0.28931], [0.3595, -0.28931], [-0.3595, -0.28931], [-0.3595, 0.28931]]"
+      footprint_padding: 0.05
+      # Same cell size as RTAB-Map's grid (Grid/CellSize), so the static layer
+      # copies the map cell by cell without resampling.
+      resolution: 0.05
+      # Unknown cells stay unknown (not free) so the planner can tell explored
+      # from unexplored space; allow_unknown lets it plan through the latter.
+      track_unknown_space: true
+      plugins: ["static_layer", "inflation_layer"]
+      # RTAB-Map publishes /rtabmap/map reliable + transient local, so a late
+      # subscriber still receives the latest map. The whole grid is
+      # republished whenever it changes; the global costmap is not rolling,
+      # so it resizes with the map as the robot explores.
+      static_layer:
+        plugin: "nav2_costmap_2d::StaticLayer"
+        map_topic: /rtabmap/map
+        map_subscribe_transient_local: true
+        subscribe_to_updates: false
+      inflation_layer:
+        plugin: "nav2_costmap_2d::InflationLayer"
+        inflation_radius: 0.70
+        cost_scaling_factor: 3.0
+      always_send_full_costmap: true
+
+planner_server:
+  ros__parameters:
+    use_sim_time: true
+    expected_planner_frequency: 20.0
+    costmap_update_timeout: 1.0
+    planner_plugins: ["GridBased"]
+    # 2D A* on the costmap: the robot is holonomic, so a path needs no
+    # kinematic feasibility (Hybrid-A* / lattice would add turning radii
+    # this robot does not have). MPPI handles orientation along the way.
+    GridBased:
+      plugin: "nav2_smac_planner::SmacPlanner2D"
+      tolerance: 0.25
+      downsample_costmap: false
+      downsampling_factor: 1
+      # The map grows while driving: goals in still unknown space are allowed
+      # and paths may cross it, then replanning at 1 Hz corrects them.
+      allow_unknown: true
+      max_iterations: 1000000
+      max_on_approach_iterations: 1000
+      max_planning_time: 2.0
+      # Penalises cost along the path: keeps it in the middle of aisles,
+      # away from rack faces.
+      cost_travel_multiplier: 2.0
+      use_final_approach_orientation: false
+      smoother:
+        max_iterations: 1000
+        w_smooth: 0.3
+        w_data: 0.2
+        tolerance: 1.0e-10
+
+smoother_server:
+  ros__parameters:
+    use_sim_time: true
+    smoother_plugins: ["simple_smoother"]
+    simple_smoother:
+      plugin: "nav2_smoother::SimpleSmoother"
+      tolerance: 1.0e-10
+      max_its: 1000
+      do_refinement: true
+
+behavior_server:
+  ros__parameters:
+    use_sim_time: true
+    local_costmap_topic: local_costmap/costmap_raw
+    global_costmap_topic: global_costmap/costmap_raw
+    local_footprint_topic: local_costmap/published_footprint
+    global_footprint_topic: global_costmap/published_footprint
+    cycle_frequency: 10.0
+    # The behaviours the default NavigateToPose tree uses for recovery.
+    behavior_plugins: ["spin", "backup", "drive_on_heading", "wait"]
+    spin:
+      plugin: "nav2_behaviors::Spin"
+    backup:
+      plugin: "nav2_behaviors::BackUp"
+    drive_on_heading:
+      plugin: "nav2_behaviors::DriveOnHeading"
+    wait:
+      plugin: "nav2_behaviors::Wait"
+    local_frame: odom
+    global_frame: map
+    robot_base_frame: base_footprint
+    transform_tolerance: 0.1
+    simulate_ahead_time: 2.0
+    enable_stamped_cmd_vel: false
+    # Spin limits; the Nav2 default acceleration (3.2 rad/s^2) is above the
+    # MecanumDrive limit. Back-up speed comes from the tree (0.15 m/s).
+    max_rotational_vel: 1.0
+    min_rotational_vel: 0.4
+    rotational_acc_lim: 0.8
+
+waypoint_follower:
+  ros__parameters:
+    use_sim_time: true
+    loop_rate: 20
+    stop_on_failure: false
+    action_server_result_timeout: 900.0
+    waypoint_task_executor_plugin: "wait_at_waypoint"
+    wait_at_waypoint:
+      plugin: "nav2_waypoint_follower::WaitAtWaypoint"
+      enabled: true
+      waypoint_pause_duration: 200
+
+# Last stage before the robot: limits every command, from MPPI and from the
+# recovery behaviours, to conservative indoor values. Open loop: in
+# simulation the drive tracks the command, so odometry feedback adds nothing.
+velocity_smoother:
+  ros__parameters:
+    use_sim_time: true
+    smoothing_frequency: 20.0
+    scale_velocities: false
+    feedback: "OPEN_LOOP"
+    # [vx, vy, wz]. vy is non-zero: the base is holonomic.
+    max_velocity: [0.6, 0.4, 1.0]
+    min_velocity: [-0.3, -0.4, -1.0]
+    max_accel: [0.5, 0.5, 0.8]
+    max_decel: [-0.5, -0.5, -0.8]
+    odom_topic: /odom
+    odom_duration: 0.1
+    deadband_velocity: [0.0, 0.0, 0.0]
+    velocity_timeout: 1.0
+    enable_stamped_cmd_vel: false

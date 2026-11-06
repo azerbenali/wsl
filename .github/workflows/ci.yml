@@ -90,7 +90,8 @@ jobs:
     needs: build-test
     runs-on: ubuntu-24.04
     container: ros:jazzy-ros-base-noble
-    timeout-minutes: 30
+    # Two full simulation runs, one after the other.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
       - name: Resolve dependencies
@@ -110,3 +111,15 @@ jobs:
           source /opt/ros/jazzy/setup.bash
           colcon test --packages-select wsl_sim --ctest-args -R system_smoke
           colcon test-result --verbose
+      # wsl_sim depends on wsl_navigation, so the navigation test cannot declare
+      # wsl_sim as a test dependency; the sourced overlay provides it. The smoke
+      # test's Gazebo server outlives its launch and would share topics with
+      # this run, so it is stopped first.
+      - name: End-to-end navigation to a goal (Nav2 on the RTAB-Map map)
+        shell: bash
+        run: |
+          pkill -f '[g]z sim' || true
+          source /opt/ros/jazzy/setup.bash
+          source install/setup.bash
+          colcon test --packages-select wsl_navigation --ctest-args -R navigate_to_goal
+          colcon test-result --test-result-base build/wsl_navigation --verbose

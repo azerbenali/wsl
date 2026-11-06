@@ -6,15 +6,16 @@
 
 [![ROS 2 Jazzy](https://img.shields.io/badge/ROS_2-Jazzy-22314E?logo=ros&logoColor=white)](#supported-platforms)
 [![Gazebo Harmonic](https://img.shields.io/badge/Gazebo-Harmonic-F58113)](#supported-platforms)
+[![Nav2](https://img.shields.io/badge/Nav2-MPPI_Omni-2E7D32)](#navigation)
 [![Ubuntu 24.04](https://img.shields.io/badge/Ubuntu-24.04_LTS-E95420?logo=ubuntu&logoColor=white)](#ubuntu-2404)
 [![macOS](https://img.shields.io/badge/macOS-Intel_%7C_Apple_Silicon-000000?logo=apple&logoColor=white)](#macos)
 [![C++17](https://img.shields.io/badge/C%2B%2B-17-00599C?logo=cplusplus&logoColor=white)](#supported-platforms)
 [![Python 3](https://img.shields.io/badge/Python-3-3776AB?logo=python&logoColor=white)](#benchmark)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue)](LICENSE)
-[![Release](https://img.shields.io/github/v/release/azerbenali/wsl?label=release&color=brightgreen)](https://github.com/azerbenali/wsl/releases/latest)
 
 [Quick start](#quick-start) ·
 [Demo](#demo) ·
+[Navigation](#navigation) ·
 [Testing](#testing) ·
 [Docs](#documentation)
 
@@ -36,6 +37,7 @@
 | **World** | 40 × 30 m warehouse with repetitive racks, pillars and dead ends |
 | **Perception** | C++ / PCL point-cloud pipeline: filtering, ground removal, obstacle clusters |
 | **SLAM** | RTAB-Map 3D LiDAR graph SLAM with ICP and loop closure |
+| **Navigation** | Nav2 on the SLAM map: click a goal, Smac 2D plans, omnidirectional MPPI drives around racks and pillars |
 | **Benchmarks** | Every estimate scored against ground truth: ATE, RPE, drift, latency, CPU |
 
 ## Demo
@@ -75,6 +77,10 @@
     <td width="50%" align="center">
       <img src="docs/media/warehouse-overview.png" alt="Top-down view of the warehouse" width="100%"/><br/>
       <b>Warehouse</b><br/><sub>40 × 30 m, top down</sub>
+    </td>
+    <td width="50%" align="center">
+      <img src="docs/media/nav-goal.gif" alt="Ubuntu 24.04 terminal sends a NavigateToPose goal around a pillar, then a 2D Goal Pose from RViz sends the robot into aisle A3" width="100%"/><br/>
+      <b>Nav2</b><br/><sub>Goal from the terminal, then from RViz: global plan, MPPI local plan, costmaps</sub>
     </td>
   </tr>
 </table>
@@ -139,11 +145,48 @@ The same dev container works on Windows.
 
 
 
+## Navigation
+
+```bash
+ros2 launch wsl_sim warehouse.launch.py nav:=true
+```
+
+<div align="center">
+  <img src="docs/media/nav-rviz.png" alt="RViz with the Navigation 2 panel, costmaps, global plan and MPPI local plan while the robot drives into aisle A3" width="92%"/>
+  <br/>
+  <sub>Goal set with 2D Goal Pose: global plan (red) around the rack block into aisle A3, MPPI local plan (blue), inflated costmaps, Navigation 2 panel</sub>
+</div>
+
+| Step | In RViz |
+|:---:|---|
+| 1 | Wait until the **Navigation 2** panel shows navigation *active* |
+| 2 | Click **2D Goal Pose** in the toolbar |
+| 3 | Click the target on the map and drag towards the heading the robot should have |
+
+The robot plans around racks and pillars and drives there. From the command line
+(`map` starts at the spawn pose, so world (−8.5, 13.4) is (3.5, 4.4)):
+
+```bash
+ros2 action send_goal /navigate_to_pose nav2_msgs/action/NavigateToPose \
+  "{pose: {header: {frame_id: map}, pose: {position: {x: 3.5, y: 4.4}, orientation: {z: 0.7071, w: 0.7071}}}}"
+```
+
+Design, parameters and troubleshooting: [docs/navigation.md](docs/navigation.md).
+
 ## Launch options
 
 ```bash
 ros2 launch wsl_sim warehouse.launch.py headless:=true rviz:=false
 ```
+
+| Option | Default | Effect |
+|---|---|---|
+| `headless` | `false` | Gazebo server only; sensors still render offscreen |
+| `rviz` | `true` | Start RViz |
+| `perception` | `true` | Start the point-cloud perception node |
+| `slam` | `true` | Start RTAB-Map |
+| `nav` | `false` | Start Nav2 (requires `slam:=true`) |
+| `ground_truth` | `false` | Publish evaluation-only ground truth |
 
 
 ## Benchmark
@@ -175,33 +218,6 @@ Benchmark the perception algorithms alone (no ROS graph, no simulator):
 ./build/wsl_perception/pipeline_benchmark 300
 ```
 
-## Testing
-
-```bash
-colcon test && colcon test-result --verbose
-```
-
-| Suite | Tests |
-|---|---|
-| `wsl_perception` | GoogleTest: parser incl. hostile layouts, each stage, boundaries, config validation; randomized property tests; launch test of the real node |
-| `wsl_benchmark` | pytest: metrics against analytic results, evaluation end to end, scenarios, pure pursuit |
-| `wsl_description` | URDF structure, inertia physics, mesh checks (collisions match, roller direction, no z-fighting), LiDAR clearance, drive limits, frame conventions, `check_urdf` |
-| `wsl_sim` | Asset and robot mesh resolution, bridge directions, ground-truth isolation, bridge ↔ robot topic consistency |
-
-End-to-end smoke test (launches the full system headless and checks sensors, frames,
-rates, TF authorities and driving):
-
-```bash
-colcon build --cmake-args -DWSL_SIM_TESTS=ON && colcon test --packages-select wsl_sim
-```
-
-| Flag | Enables |
-|---|---|
-| `-DWSL_SANITIZE=ON` | ASan + UBSan |
-| `-DWSL_BUILD_FUZZERS=ON` | libFuzzer target for the PointCloud2 parser (clang) |
-
-CI runs build, tests, sanitizers, clang-format, flake8 and the simulation smoke test
-on amd64 and arm64.
 
 ## Supported platforms
 
@@ -211,6 +227,7 @@ on amd64 and arm64.
 | ROS | ROS 2 Jazzy Jalisco |
 | Simulator | Gazebo Harmonic (gz-sim 8) via `ros_gz` |
 | SLAM | RTAB-Map (`rtabmap_slam`), PCL ICP backend |
+| Navigation | Nav2 (Jazzy): Smac 2D planner, MPPI controller |
 | Languages | C++17 (perception), Python 3 (launch, benchmark) |
 | Architectures | amd64 and arm64 |
 
@@ -221,17 +238,12 @@ on amd64 and arm64.
 | Copyright | © 2025 Robotnik Automation S.L. |
 | Licence | BSD-3-Clause, kept with the files: [`meshes/rbsummit_steel/LICENSE`](src/wsl_description/meshes/rbsummit_steel/LICENSE) |
 
-## Documentation
 
-| Document | Contents |
-|---|---|
-| [Architecture](docs/architecture.md) | Nodes, data flow, performance profiling |
-| [Benchmarking](docs/benchmarking.md) | Metrics and methodology |
 
 ---
 
 <div align="center">
 
-© 2026 Azer Ben Ali · [Apache-2.0](LICENSE) · v0.1.0
+© 2026 Azer Ben Ali · [Apache-2.0](LICENSE) · v0.2.0
 
 </div>
