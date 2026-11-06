@@ -80,8 +80,8 @@
       <b>Warehouse</b><br/><sub>40 × 30 m, top down</sub>
     </td>
     <td width="50%" align="center">
-      <img src="docs/media/nav-goal.gif" alt="RViz: the robot plans around a pillar and drives to a clicked goal" width="100%"/><br/>
-      <b>Nav2</b><br/><sub>Goal from RViz, global plan, MPPI local plan, costmaps</sub>
+      <img src="docs/media/nav-goal.gif" alt="Ubuntu 24.04 terminal sends a NavigateToPose goal around a pillar, then a 2D Goal Pose from RViz sends the robot into aisle A3" width="100%"/><br/>
+      <b>Nav2</b><br/><sub>Goal from the terminal, then from RViz: global plan, MPPI local plan, costmaps</sub>
     </td>
   </tr>
 </table>
@@ -151,6 +151,12 @@ The same dev container works on Windows.
 ```bash
 ros2 launch wsl_sim warehouse.launch.py nav:=true
 ```
+
+<div align="center">
+  <img src="docs/media/nav-rviz.png" alt="RViz with the Navigation 2 panel, costmaps, global plan and MPPI local plan while the robot drives into aisle A3" width="92%"/>
+  <br/>
+  <sub>Goal set with 2D Goal Pose: global plan (red) around the rack block into aisle A3, MPPI local plan (blue), inflated costmaps, Navigation 2 panel</sub>
+</div>
 
 | Step | In RViz |
 |:---:|---|
