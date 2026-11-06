@@ -219,41 +219,6 @@ Benchmark the perception algorithms alone (no ROS graph, no simulator):
 ./build/wsl_perception/pipeline_benchmark 300
 ```
 
-## Testing
-
-```bash
-colcon test && colcon test-result --verbose
-```
-
-| Suite | Tests |
-|---|---|
-| `wsl_perception` | GoogleTest: parser incl. hostile layouts, each stage, boundaries, config validation; randomized property tests; launch test of the real node |
-| `wsl_benchmark` | pytest: metrics against analytic results, evaluation end to end, scenarios, pure pursuit |
-| `wsl_description` | URDF structure, inertia physics, mesh checks (collisions match, roller direction, no z-fighting), LiDAR clearance, drive limits, frame conventions, `check_urdf` |
-| `wsl_sim` | Asset and robot mesh resolution, bridge directions, ground-truth isolation, bridge ↔ robot topic consistency |
-| `wsl_navigation` | Nav2 config against the robot model and the system: frames, no AMCL / map_server, footprint = chassis, limits inside MecanumDrive, MPPI Omni, real topics, `/cmd_vel` chain ends in `Twist` |
-
-End-to-end smoke test (launches the full system headless and checks sensors, frames,
-rates, TF authorities and driving):
-
-```bash
-colcon build --cmake-args -DWSL_SIM_TESTS=ON && colcon test --packages-select wsl_sim
-```
-
-End-to-end navigation test (full system with Nav2; drives to a goal around a pillar
-and checks the outcome and the final pose). Run it on its own, with the overlay sourced:
-
-```bash
-source install/setup.bash && colcon test --packages-select wsl_navigation
-```
-
-| Flag | Enables |
-|---|---|
-| `-DWSL_SANITIZE=ON` | ASan + UBSan |
-| `-DWSL_BUILD_FUZZERS=ON` | libFuzzer target for the PointCloud2 parser (clang) |
-
-CI runs build, tests, sanitizers, clang-format, flake8 and the simulation smoke and
-navigation tests on amd64 and arm64.
 
 ## Supported platforms
 
@@ -274,13 +239,7 @@ navigation tests on amd64 and arm64.
 | Copyright | © 2025 Robotnik Automation S.L. |
 | Licence | BSD-3-Clause, kept with the files: [`meshes/rbsummit_steel/LICENSE`](src/wsl_description/meshes/rbsummit_steel/LICENSE) |
 
-## Documentation
 
-| Document | Contents |
-|---|---|
-| [Architecture](docs/architecture.md) | Nodes, data flow, performance profiling |
-| [Benchmarking](docs/benchmarking.md) | Metrics and methodology |
-| [Navigation](docs/navigation.md) | Nav2 architecture, design decisions, parameters, troubleshooting |
 
 ---
 

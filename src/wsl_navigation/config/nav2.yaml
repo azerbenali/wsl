@@ -1,28 +1,7 @@
 # Copyright 2026 Azer Ben Ali
 # SPDX-License-Identifier: Apache-2.0
 #
-# Nav2 for the RB-Summit-XL Steel: goal-driven navigation on the RTAB-Map map.
-#
-# Localisation is not part of Nav2 here. RTAB-Map is the only authority for
-# map -> odom and MecanumDrive the only authority for odom -> base_footprint,
-# so there is no AMCL and no map_server, and no node in this file publishes TF.
-# The global costmap reads the map RTAB-Map builds while driving; the local
-# costmap marks obstacles straight from the 3D LiDAR cloud.
-#
-# Command chain (remappings in navigation.launch.py):
-#   controller_server, behavior_server --cmd_vel_nav--> velocity_smoother
-#   velocity_smoother --/cmd_vel (geometry_msgs/Twist)--> ros_gz_bridge
-#   --> MecanumDrive. The bridge (wsl_sim/config/bridge.yaml) expects an
-#   unstamped Twist, so every node that publishes a velocity has
-#   enable_stamped_cmd_vel: false.
-#
-# Velocity and acceleration limits stay inside the MecanumDrive limits in
-# wsl_description/urdf/wsl_amr.gazebo.xacro (|v| <= 1.5, |a| <= 1.0, one value
-# for linear and angular axes). wsl_navigation/test/test_nav2_config.py checks
-# this, the frames and the footprint against the expanded robot model.
-#
-# Every parameter below is declared by the Jazzy Nav2 nodes (1.3.x); names
-# that a node does not declare would be ignored without a message.
+# Nav2 
 
 bt_navigator:
   ros__parameters:

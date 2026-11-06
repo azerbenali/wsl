@@ -1,16 +1,4 @@
-# RTAB-Map graph SLAM with 3D LiDAR and wheel odometry.
-#
-# Odometry is read from TF (odom -> base_footprint, published by MecanumDrive)
-# at each scan's stamp, which avoids approximate topic synchronisation. Each
-# new graph node is linked to the previous one by point-to-plane ICP between
-# scans (neighbour link refinement), so wheel slip and calibration error are
-# corrected locally. Loop closures are found by proximity: when the robot
-# revisits a place within RGBD/LocalRadius of the current pose estimate, the
-# scans are registered by ICP and, if accepted, the graph is optimised.
-# rtabmap publishes map -> odom; it is the only authority for that transform.
-#
-# RTAB-Map parameters are strings in ROS 2. The key matches the node in any
-# namespace (slam.launch.py runs it as /rtabmap/rtabmap).
+
 /**/rtabmap:
   ros__parameters:
     frame_id: base_footprint
